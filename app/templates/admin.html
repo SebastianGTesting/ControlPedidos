@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Caja y Administración</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="bg-light pb-5">
+
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fa-solid fa-cash-register me-2 text-warning"></i>Caja y Control de Pedidos
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <div class="form-check form-switch text-white mb-0">
+                    <input class="form-check-input" type="checkbox" id="switchModoPago"
+                        onchange="cambiarModoPago(this.checked)"
+                        {% if modo_pago == 'pagar_primero' %}checked{% endif %}>
+                    <label class="form-check-label small" for="switchModoPago">
+                        Exigir Pago Antes de Cocina
+                    </label>
+                </div>
+                <span class="badge bg-success"><i class="fa-solid fa-wifi me-1"></i>En Vivo</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+
+            <!-- Columna Izquierda: Gestión del Menú -->
+            <div class="col-12 col-lg-4">
+
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fa-solid fa-plus-circle me-2 text-primary"></i>Añadir Nuevo Plato
+                        </h5>
+                    </div>
+                    <div class="card-body px-4">
+                        <form action="/admin/agregar_plato" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label font-monospace small">Nombre</label>
+                                <input type="text" name="nombre" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-monospace small">Precio ($)</label>
+                                <input type="number" step="500" name="precio" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-monospace small">URL Imagen</label>
+                                <input type="url" name="imagen" class="form-control" placeholder="https://..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-monospace small">Descripción</label>
+                                <textarea name="descripcion" class="form-control" rows="2" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">Guardar Plato</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fa-solid fa-utensils me-2 text-secondary"></i>Platos del Menú
+                        </h5>
+                    </div>
+                    <div class="card-body px-4">
+                        <ul class="list-group list-group-flush" id="lista-platos">
+                            {% for p in platos %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <span class="fw-bold d-block">{{ p.nombre }}</span>
+                                    <small class="text-success">$ {{ "{:,.0f}".format(p.precio) }}</small>
+                                </div>
+                                <a href="/admin/eliminar_plato/{{ p.id }}"
+                                    class="btn btn-sm btn-outline-danger border-0"
+                                    onclick="return confirm('¿Eliminar plato?')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Comandas + Historial -->
+            <div class="col-12 col-lg-8">
+
+                <!-- Comandas Activas -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fa-solid fa-fire me-2 text-danger"></i>Comandas en Curso (Cocina / Servir)
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i>Los entregados se ocultan tras 5 min
+                        </small>
+                    </div>
+                    <div class="card-body px-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID / Mesa</th>
+                                        <th>Detalle</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                        <th>Medio Pago</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-pedidos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Arqueo de Caja -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fa-solid fa-chart-line me-2 text-success"></i>Arqueo de Caja y Ventas del Día
+                        </h5>
+                    </div>
+                    <div class="card-body px-4">
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 bg-light rounded-4 border text-center">
+                                    <small class="text-muted fw-bold d-block text-uppercase">Total Recaudado</small>
+                                    <span id="stat-total" class="fs-4 fw-bold text-success">$ 0</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 bg-light rounded-4 border text-center">
+                                    <small class="text-muted fw-bold d-block text-uppercase">Efectivo</small>
+                                    <span id="stat-efectivo" class="fs-4 fw-bold text-dark">$ 0</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 bg-light rounded-4 border text-center">
+                                    <small class="text-muted fw-bold d-block text-uppercase">Transferencias</small>
+                                    <span id="stat-transferencia" class="fs-4 fw-bold text-primary">$ 0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mb-3 text-secondary">
+                            <i class="fa-solid fa-list me-2"></i>Historial General de Pedidos
+                        </h6>
+                        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Mesa</th>
+                                        <th>Hora</th>
+                                        <th>Monto</th>
+                                        <th>Estado Final</th>
+                                        <th>Método Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-historial"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Transferencia -->
+    <div class="modal fade" id="modalTransferencia" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-mobile-screen-button me-2 text-primary"></i>Selecciona Plataforma
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <input type="hidden" id="pedido_id_transf">
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-primary btn-lg fw-bold rounded-3" onclick="confirmarTransferencia('Nequi')">
+                            <i class="fa-solid fa-wallet me-2"></i>Nequi
+                        </button>
+                        <button class="btn btn-outline-danger btn-lg fw-bold rounded-3" onclick="confirmarTransferencia('Daviplata')">
+                            <i class="fa-solid fa-building-columns me-2"></i>Daviplata
+                        </button>
+                        <button class="btn btn-outline-dark btn-lg fw-bold rounded-3" onclick="confirmarTransferencia('Bre-B')">
+                            <i class="fa-solid fa-bolt me-2"></i>Bre-B
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Entregado -->
+    <div class="modal fade" id="modalConfirmarEntregado" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-circle-check me-2 text-success"></i>Confirmar Entrega de Comanda
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0 fs-6">
+                        ¿Confirmas marcar el pedido <strong id="lbl_pedido_id">#0</strong> de la
+                        <strong id="lbl_mesa_id">Mesa 0</strong> como <strong>ENTREGADO</strong>?
+                    </p>
+                    <small class="text-muted d-block mt-2">La comanda desaparecerá de la lista activa pasados 5 minutos.</small>
+                    <input type="hidden" id="pedido_id_entregado">
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success fw-bold px-4" onclick="ejecutarEntrega()">
+                        Sí, Confirmar Entrega
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioNotif" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Base de datos SQLite generada en runtime
+instance/
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
