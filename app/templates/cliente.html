@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Digital - Mesa {{ mesa }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cliente.css') }}">
+</head>
+<body>
+
+    <div class="hero-banner text-center shadow-sm mb-4">
+        <h2 class="fw-bold mb-0"><i class="fa-solid fa-utensils me-2 text-warning"></i>Gourmet Express</h2>
+        <span class="badge bg-warning text-dark fs-6 mt-2">Mesa #{{ mesa }}</span>
+    </div>
+
+    <div class="container mb-5">
+        <div class="row g-4">
+            {% for plato in platos %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                    <img src="{{ plato.imagen }}" class="card-img-top" alt="{{ plato.nombre }}">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title fw-bold text-dark">{{ plato.nombre }}</h5>
+                            <p class="card-text text-muted small">{{ plato.descripcion }}</p>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-5 fw-bold text-success">$ {{ "{:,.0f}".format(plato.precio) }}</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-outline-secondary qty-btn" onclick="cambiarCantidad({{ plato.id }}, -1)">-</button>
+                                    <span id="cant-{{ plato.id }}" class="fw-bold fs-6">1</span>
+                                    <button class="btn btn-outline-secondary qty-btn" onclick="cambiarCantidad({{ plato.id }}, 1)">+</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-dark w-100 rounded-3 fw-bold"
+                                onclick="agregarAlCarrito({{ plato.id }}, '{{ plato.nombre }}', {{ plato.precio }})">
+                                <i class="fa-solid fa-cart-plus me-1 text-warning"></i> Agregar al Carrito
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Barra carrito sticky -->
+    <div class="cart-sticky p-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-muted d-block">Total a Pagar:</small>
+                <span id="total-carrito" class="fs-4 fw-bold text-success">$ 0</span>
+            </div>
+            <button class="btn btn-success btn-lg rounded-4 fw-bold px-4"
+                data-bs-toggle="modal" data-bs-target="#modalCarrito">
+                <i class="fa-solid fa-basket-shopping me-2"></i>Ver Pedido (<span id="cont-carrito">0</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Carrito -->
+    <div class="modal fade" id="modalCarrito" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i>Resumen de tu Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul id="lista-carrito" class="list-group list-group-flush mb-3"></ul>
+                    <div class="alert alert-info py-2 small rounded-3">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        {% if modo_pago == 'pagar_primero' %}
+                            <strong>Nota:</strong> Al confirmar, acércate a la caja para realizar el pago e iniciar la preparación.
+                        {% else %}
+                            <strong>Nota:</strong> Tu pedido será enviado a la cocina de inmediato. Pagas al finalizar.
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between fs-5 fw-bold border-top pt-3">
+                        <span>Total:</span>
+                        <span id="modal-total" class="text-success">$ 0</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Seguir Pidiendo</button>
+                    <button type="button" class="btn btn-success fw-bold px-4" onclick="confirmarPedido()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Confirmar Pedido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/cliente.js') }}"></script>
+    <script>const mesaActual = {{ mesa }};</script>
+</body>
+</html>

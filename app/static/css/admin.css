@@ -1,0 +1,12 @@
+/* Admin panel — estilos adicionales */
+.table th {
+    white-space: nowrap;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.sticky-top {
+    top: 0;
+}
